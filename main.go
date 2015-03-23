@@ -17,6 +17,7 @@ import (
 
 const spamcheckUrl = "http://spamcheck.postmarkapp.com/filter"
 const fallbackHost = "unknown.host.com"
+
 // this is a historical accident but we want a better name
 const RFC2822 = time.RubyDate
 
