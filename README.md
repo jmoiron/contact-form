@@ -1,5 +1,7 @@
 # contact-form
 
+[![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://raw.githubusercontent.com/jmoiron/contact-form/master/LICENSE)
+
 A simple stand-alone web server which implements a contact form on an
 otherwise static website.
 
