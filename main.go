@@ -142,10 +142,6 @@ func messageID() string {
 	return fmt.Sprintf("<%d@%s>", rand.Int(), host)
 }
 
-// Note that the Message object's layout and its Validate() method contain
-// code of an unknown license from the blog post By Alex Edwards:
-//   http://www.alexedwards.net/blog/form-validation-and-processing
-
 // A Message deliverable via email which can be validated and spam-checked.
 type Message struct {
 	From    string                 `json:"from"`

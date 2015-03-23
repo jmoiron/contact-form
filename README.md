@@ -3,6 +3,10 @@
 A simple stand-alone web server which implements a contact form on an
 otherwise static website.
 
+Contains code from [Alex Edward's Form Validation blog post](http://www.alexedwards.net/blog/form-validation-and-processing)
+which is [licensed under the MIT
+licence](https://twitter.com/ajmedwards/status/580082588879970305).
+
 ## usage
 
 If you run `contact-form` in a directory, it will serve up everything in that
