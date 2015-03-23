@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const spamcheckUrl = "http://spamcheck.postmarkapp.com/filter"
+const spamcheckURL = "http://spamcheck.postmarkapp.com/filter"
 const fallbackHost = "unknown.host.com"
 
 // this is a historical accident but we want a better name
@@ -101,7 +101,7 @@ func contact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logJson(msg)
+	logJSON(msg)
 
 	if !msg.SpamCheck() {
 		msg.Errors["success"] = false
@@ -123,8 +123,8 @@ func contact(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(msi{"success": true})
 }
 
-// logJson logs some data as indented json, or an error marshalling it.
-func logJson(v interface{}) {
+// logJSON logs some data as indented json, or an error marshalling it.
+func logJSON(v interface{}) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		log.Println(err)
@@ -132,9 +132,9 @@ func logJson(v interface{}) {
 	log.Println(string(b))
 }
 
-// messageId() returns an rfc-compatible message id using a random int and the
+// messageID returns an rfc-compatible message id using a random int and the
 // current host.  It is included in the header to reduce the SA score.
-func messageId() string {
+func messageID() string {
 	host, err := os.Hostname()
 	if err != nil {
 		host = fallbackHost
@@ -146,7 +146,7 @@ func messageId() string {
 // code of an unknown license from the blog post By Alex Edwards:
 //   http://www.alexedwards.net/blog/form-validation-and-processing
 
-// An email message which can also form the basis for a json response.
+// A Message deliverable via email which can be validated and spam-checked.
 type Message struct {
 	From    string                 `json:"from"`
 	Subject string                 `json:"subject"`
@@ -163,7 +163,7 @@ func (m *Message) FullBody() string {
 	buf.WriteString(fmt.Sprintf("Reply-To: %s\r\n", m.From))
 	buf.WriteString(fmt.Sprintf("Date: %s\r\n", date))
 	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", m.Subject))
-	buf.WriteString(fmt.Sprintf("Message-Id: %s\r\n", messageId()))
+	buf.WriteString(fmt.Sprintf("Message-Id: %s\r\n", messageID()))
 	buf.WriteString(m.Body)
 	return buf.String()
 }
@@ -200,7 +200,7 @@ func (m *Message) SpamCheck() bool {
 		log.Printf("Error with spamcheck: %s", err)
 		return true
 	}
-	logJson(resp)
+	logJSON(resp)
 	return resp.Success
 }
 
@@ -236,7 +236,7 @@ func (s *SpamCheckReq) Post() (*SpamCheckResp, error) {
 	if err != nil {
 		return nil, err
 	}
-	hresp, err := http.Post(spamcheckUrl, "application/json", bytes.NewBuffer(body))
+	hresp, err := http.Post(spamcheckURL, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
