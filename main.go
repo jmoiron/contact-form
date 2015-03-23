@@ -17,6 +17,8 @@ import (
 
 const spamcheckUrl = "http://spamcheck.postmarkapp.com/filter"
 const fallbackHost = "unknown.host.com"
+// this is a historical accident but we want a better name
+const RFC2822 = time.RubyDate
 
 var cfg struct {
 	port      int
@@ -55,6 +57,7 @@ func init() {
 	flag.StringVar(&cfg.destemail, "destemail", cfg.destemail, "destination mailbox")
 	flag.Parse()
 
+	// if the password flag was actually set, override cfg with it
 	if flagPass != defaultPass {
 		cfg.mailpass = flagPass
 	}
@@ -70,7 +73,17 @@ func main() {
 
 type msi map[string]interface{}
 
-// contact handles a contact form submission.
+// contact handles a contact form submission.  It expects a form body with the
+// values "from", "subject", and "body" representing the from email address, the
+// subject of the message and the message content.  It returns nothing, but
+// responds to the request with a json message which looks like:
+//
+// { "success": bool,      // always present, true if message was sent
+//   "<field>": "message", // a form field or "form" for errors validating the form
+// }
+//
+// contact also logs any errors it encounters while sending so the server admin
+// can diagnose what settings might be wrong.
 func contact(w http.ResponseWriter, r *http.Request) {
 	// we are always responding with a json message
 	w.Header().Add("Content-Type", "application/json")
@@ -109,6 +122,7 @@ func contact(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(msi{"success": true})
 }
 
+// logJson logs some data as indented json, or an error marshalling it.
 func logJson(v interface{}) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -117,6 +131,8 @@ func logJson(v interface{}) {
 	log.Println(string(b))
 }
 
+// messageId() returns an rfc-compatible message id using a random int and the
+// current host.  It is included in the header to reduce the SA score.
 func messageId() string {
 	host, err := os.Hostname()
 	if err != nil {
@@ -125,6 +141,11 @@ func messageId() string {
 	return fmt.Sprintf("<%d@%s>", rand.Int(), host)
 }
 
+// Note that the Message object's layout and its Validate() method contain
+// code of an unknown license from the blog post By Alex Edwards:
+//   http://www.alexedwards.net/blog/form-validation-and-processing
+
+// An email message which can also form the basis for a json response.
 type Message struct {
 	From    string                 `json:"from"`
 	Subject string                 `json:"subject"`
@@ -132,9 +153,10 @@ type Message struct {
 	Errors  map[string]interface{} `json:"errors"`
 }
 
+// FullBody returns a full message body with headers.
 func (m *Message) FullBody() string {
 	var buf bytes.Buffer
-	date := time.Now().Local().Format(time.RFC822Z)
+	date := time.Now().Local().Format(RFC2822)
 	buf.WriteString(fmt.Sprintf("From: %s\r\n", m.From))
 	buf.WriteString(fmt.Sprintf("To: %s\r\n", cfg.destemail))
 	buf.WriteString(fmt.Sprintf("Reply-To: %s\r\n", m.From))
@@ -192,6 +214,7 @@ func (m *Message) Deliver() error {
 	return smtp.SendMail(sendaddr, auth, m.From, to, body)
 }
 
+// SpamCheckResp is a response from the postapp spamcheck API.
 type SpamCheckResp struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
@@ -200,11 +223,13 @@ type SpamCheckResp struct {
 	resp    *http.Response
 }
 
+// SpamCheckReq encapsulates a request against the postapp spamcheck API.
 type SpamCheckReq struct {
 	Email   string `json:"email"`
 	Options string `json:"options"`
 }
 
+// Post this request to the API and return a response.
 func (s *SpamCheckReq) Post() (*SpamCheckResp, error) {
 	body, err := json.Marshal(s)
 	if err != nil {
